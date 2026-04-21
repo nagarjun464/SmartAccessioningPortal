@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartAccessioningPortal.Application\SmartAccessioningPortal.Application.csproj" />
+    <ProjectReference Include="..\SmartAccessioningPortal.Domain\SmartAccessioningPortal.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

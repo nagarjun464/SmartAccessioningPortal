@@ -10,4 +10,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SmartAccessioningPortal.Application\SmartAccessioningPortal.Application.csproj" />
+    <ProjectReference Include="..\SmartAccessioningPortal.Domain\SmartAccessioningPortal.Domain.csproj" />
+    <ProjectReference Include="..\SmartAccessioningPortal.Infrastructure\SmartAccessioningPortal.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
