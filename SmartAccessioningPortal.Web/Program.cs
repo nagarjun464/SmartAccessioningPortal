@@ -1,10 +1,21 @@
 using SmartAccessioningPortal.Web.Components;
+using SmartAccessioningPortal.Web.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<ApiSettings>(
+    builder.Configuration.GetSection("ApiSettings"));
+
+builder.Services.AddHttpClient("ApiClient", (serviceProvider, client) =>
+{
+    var configuration = serviceProvider.GetRequiredService<IConfiguration>();
+    var baseUrl = configuration["ApiSettings:BaseUrl"];
+    client.BaseAddress = new Uri(baseUrl!);
+});
 
 var app = builder.Build();
 
