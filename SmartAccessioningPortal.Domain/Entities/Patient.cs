@@ -1,4 +1,6 @@
-﻿namespace SmartAccessioningPortal.Domain.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace SmartAccessioningPortal.Domain.Entities;
 
 public class Patient
 {
@@ -9,5 +11,6 @@ public class Patient
     public DateTime? DOB { get; set; }
     public string? MRN { get; set; }
 
+    [JsonIgnore]
     public Case? Case { get; set; }
 }

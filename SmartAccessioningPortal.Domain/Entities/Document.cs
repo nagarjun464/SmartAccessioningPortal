@@ -1,4 +1,6 @@
-﻿namespace SmartAccessioningPortal.Domain.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace SmartAccessioningPortal.Domain.Entities;
 
 public class Document
 {
@@ -9,5 +11,6 @@ public class Document
     public string ContentType { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 
+    [JsonIgnore]
     public Case? Case { get; set; }
 }

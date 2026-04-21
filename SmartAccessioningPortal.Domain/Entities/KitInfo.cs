@@ -1,4 +1,6 @@
-﻿namespace SmartAccessioningPortal.Domain.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace SmartAccessioningPortal.Domain.Entities;
 
 public class KitInfo
 {
@@ -9,5 +11,6 @@ public class KitInfo
     public string OperatorName { get; set; } = string.Empty;
     public DateTime ReceivedAt { get; set; } = DateTime.UtcNow;
 
+    [JsonIgnore]
     public Case? Case { get; set; }
 }
