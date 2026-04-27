@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Path": "SmartAccessioningPortal.Api\\SmartAccessioningPortal.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "SmartAccessioningPortal.Web\\SmartAccessioningPortal.Web.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]
