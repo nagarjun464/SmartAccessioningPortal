@@ -53,6 +53,9 @@ else
                 <th>Case ID</th>
                 <th>Status</th>
                 <th>Test Type</th>
+                <th>Patient</th>
+                <th>Kit Box Code</th>
+                <th>Lot Code</th>
                 <th>Created By</th>
                 <th>Created At</th>
             </tr>
@@ -70,6 +73,9 @@ else
                         </span>
                     </td>
                     <td>@item.TestType</td>
+                    <td>@($"{item.PatientFirstName} {item.PatientLastName}".Trim())</td>
+                    <td>@item.KitBoxCode</td>
+                    <td>@item.LotCode</td>
                     <td>@item.CreatedBy</td>
                     <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
                 </tr>
@@ -103,7 +109,10 @@ else
                     x.CaseId.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                     x.Status.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
                     (x.TestType != null && x.TestType.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
-                    x.CreatedBy.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                    x.CreatedBy.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || (x.PatientFirstName != null && x.PatientFirstName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.PatientLastName != null && x.PatientLastName.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.KitBoxCode != null && x.KitBoxCode.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    (x.LotCode != null && x.LotCode.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
                 ).ToList();
             }
 

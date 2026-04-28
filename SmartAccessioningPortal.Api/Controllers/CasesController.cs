@@ -35,16 +35,7 @@ public class CasesController : ControllerBase
         return Ok(intakeCase);
     }
 
-    // GET ALL CASES
-    [HttpGet]
-    public async Task<IActionResult> GetCases()
-    {
-        var cases = await _context.Cases
-            .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync();
-
-        return Ok(cases);
-    }
+    
 
     // GET CASE BY ID
     [HttpGet("{id}")]
@@ -78,6 +69,28 @@ public class CasesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(intakeCase);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetCases()
+    {
+        var cases = await _context.Cases
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new CaseListResponse
+            {
+                CaseId = x.CaseId,
+                Status = x.Status,
+                TestType = x.TestType,
+                CreatedAt = x.CreatedAt,
+                CreatedBy = x.CreatedBy,
+                PatientFirstName = x.Patient != null ? x.Patient.FirstName : null,
+                PatientLastName = x.Patient != null ? x.Patient.LastName : null,
+                KitBoxCode = x.KitInfo != null ? x.KitInfo.KitBoxCode : null,
+                LotCode = x.KitInfo != null ? x.KitInfo.LotCode : null
+            })
+            .ToListAsync();
+
+        return Ok(cases);
     }
 
     // SAVE PATIENT
