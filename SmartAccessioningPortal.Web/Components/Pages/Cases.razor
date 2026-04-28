@@ -9,21 +9,18 @@
 
 @if (CaseList is not null)
 {
-    <div style="display:flex; gap:16px; margin-bottom:20px;">
-        <div style="border:1px solid #ccc; padding:12px; border-radius:8px;">
-            <strong>Total Cases</strong><br />
-            @CaseList.Count
-        </div>
+    <div style="margin-bottom:20px;">
+        <button class="btn btn-outline-secondary me-2" @onclick="@(() => SelectedStatus = "All")">
+            All
+        </button>
 
-        <div style="border:1px solid #ccc; padding:12px; border-radius:8px;">
-            <strong>Draft</strong><br />
-            @CaseList.Count(x => x.Status == "Draft")
-        </div>
+        <button class="btn btn-outline-warning me-2" @onclick="@(() => SelectedStatus = "Draft")">
+            Draft
+        </button>
 
-        <div style="border:1px solid #ccc; padding:12px; border-radius:8px;">
-            <strong>Ready For Review</strong><br />
-            @CaseList.Count(x => x.Status == "ReadyForReview")
-        </div>
+        <button class="btn btn-outline-success" @onclick="@(() => SelectedStatus = "ReadyForReview")">
+            Ready For Review
+        </button>
     </div>
 }
 
@@ -53,7 +50,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var item in CaseList)
+            @foreach (var item in FilteredCases)
             {
                 <tr>
                     <td>
@@ -76,6 +73,13 @@ else
 @code {
     private List<CaseListItemModel>? CaseList;
     private string? ErrorMessage;
+
+    private string SelectedStatus = "All";
+
+    private IEnumerable<CaseListItemModel> FilteredCases =>
+        SelectedStatus == "All"
+            ? CaseList ?? []
+            : CaseList?.Where(x => x.Status == SelectedStatus) ?? [];
 
     private string GetStatusBadgeStyle(string status)
 {

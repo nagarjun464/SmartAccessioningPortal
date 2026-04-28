@@ -14,7 +14,7 @@
             position: fixed;
             top: 20px;
             right: 20px;
-            background-color: #198754;
+            background-color: @ToastBackgroundColor;
             color: white;
             padding: 12px 20px;
             border-radius: 8px;
@@ -114,6 +114,7 @@
     private string? SelectedFileName;
     private bool ShowToast = false;
     private string ToastMessage = string.Empty;
+    private string ToastBackgroundColor = "#198754";
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
     {
@@ -128,6 +129,18 @@
 
     private async Task ShowSuccessToast(string message)
     {
+        ToastBackgroundColor = "#198754";
+        await ShowToastMessage(message);
+    }
+
+    private async Task ShowErrorToast(string message)
+    {
+        ToastBackgroundColor = "#dc3545";
+        await ShowToastMessage(message);
+    }
+
+    private async Task ShowToastMessage(string message)
+    {
         ToastMessage = message;
         ShowToast = true;
 
@@ -135,7 +148,7 @@
 
         await Task.Delay(5000);
 
-        if (ShowToast) 
+        if (ShowToast)
         {
             ShowToast = false;
             StateHasChanged();
@@ -218,7 +231,7 @@
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            await ShowErrorToast($"Error: {ex.Message}");
         }
     }
 
