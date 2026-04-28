@@ -62,6 +62,24 @@ public class CasesController : ControllerBase
         return Ok(intakeCase);
     }
 
+    [HttpPatch("{id}/status")]
+    public async Task<IActionResult> UpdateCaseStatus(int id, [FromBody] string status)
+    {
+        var intakeCase = await _context.Cases.FirstOrDefaultAsync(x => x.CaseId == id);
+
+        if (intakeCase == null)
+            return NotFound("Case not found.");
+
+        if (string.IsNullOrWhiteSpace(status))
+            return BadRequest("Status is required.");
+
+        intakeCase.Status = status;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(intakeCase);
+    }
+
     // SAVE PATIENT
     [HttpPost("{id}/patient")]
     public async Task<IActionResult> SavePatient(int id, SavePatientRequest request)

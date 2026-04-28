@@ -151,6 +151,11 @@
                 uploadResponse.EnsureSuccessStatusCode();
             }
             var submittedCaseId = createdCase.CaseId;
+            var statusResponse = await client.PatchAsJsonAsync(
+                    $"api/cases/{createdCase.CaseId}/status",
+                    "ReadyForReview");
+
+            statusResponse.EnsureSuccessStatusCode();
 
             FormModel = new IntakeFormModel();
             SelectedFile = null;
