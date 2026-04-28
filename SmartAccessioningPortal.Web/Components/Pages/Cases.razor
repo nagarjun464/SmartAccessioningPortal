@@ -1,0 +1,66 @@
+﻿@page "/cases"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@using SmartAccessioningPortal.Web.Models
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Intake Cases</h3>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <p style="color:red">@ErrorMessage</p>
+}
+
+@if (CaseList is null)
+{
+    <p>Loading cases...</p>
+}
+else if (!CaseList.Any())
+{
+    <p>No cases found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Case ID</th>
+                <th>Status</th>
+                <th>Test Type</th>
+                <th>Created By</th>
+                <th>Created At</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in CaseList)
+            {
+                <tr>
+                    <td>@item.CaseId</td>
+                    <td>@item.Status</td>
+                    <td>@item.TestType</td>
+                    <td>@item.CreatedBy</td>
+                    <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<CaseListItemModel>? CaseList;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            CaseList = await client.GetFromJsonAsync<List<CaseListItemModel>>("api/cases");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading cases: {ex.Message}";
+        }
+    }
+}
