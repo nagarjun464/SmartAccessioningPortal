@@ -36,7 +36,9 @@ else
             @foreach (var item in CaseList)
             {
                 <tr>
-                    <td>@item.CaseId</td>
+                    <td>
+                        <a href="@($"/cases/{item.CaseId}")">@item.CaseId</a>
+                    </td>
                     <td>@item.Status</td>
                     <td>@item.TestType</td>
                     <td>@item.CreatedBy</td>

@@ -1,0 +1,123 @@
+﻿@page "/cases/{CaseId:int}"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@using SmartAccessioningPortal.Web.Models
+@inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+
+<h3>Case Details</h3>
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <p style="color:red">@ErrorMessage</p>
+}
+
+@if (CaseDetail is null)
+{
+    <p>Loading case details...</p>
+}
+else
+{
+    <button class="btn btn-secondary" @onclick="GoBack">Back to Cases</button>
+
+    <h4>Case Information</h4>
+    <table class="table">
+        <tbody>
+            <tr><th>Case ID</th><td>@CaseDetail.CaseId</td></tr>
+            <tr><th>Status</th><td>@CaseDetail.Status</td></tr>
+            <tr><th>Test Type</th><td>@CaseDetail.TestType</td></tr>
+            <tr><th>Created By</th><td>@CaseDetail.CreatedBy</td></tr>
+            <tr><th>Created At</th><td>@CaseDetail.CreatedAt.ToLocalTime().ToString("g")</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Patient Information</h4>
+    @if (CaseDetail.Patient is null)
+    {
+        <p>No patient information found.</p>
+    }
+    else
+    {
+        <table class="table">
+            <tbody>
+                <tr><th>First Name</th><td>@CaseDetail.Patient.FirstName</td></tr>
+                <tr><th>Last Name</th><td>@CaseDetail.Patient.LastName</td></tr>
+                <tr><th>DOB</th><td>@CaseDetail.Patient.DOB?.ToString("MM/dd/yyyy")</td></tr>
+                <tr><th>MRN</th><td>@CaseDetail.Patient.MRN</td></tr>
+            </tbody>
+        </table>
+    }
+
+    <h4>Kit Information</h4>
+    @if (CaseDetail.KitInfo is null)
+    {
+        <p>No kit information found.</p>
+    }
+    else
+    {
+        <table class="table">
+            <tbody>
+                <tr><th>Kit Box Code</th><td>@CaseDetail.KitInfo.KitBoxCode</td></tr>
+                <tr><th>Lot Code</th><td>@CaseDetail.KitInfo.LotCode</td></tr>
+                <tr><th>Operator Name</th><td>@CaseDetail.KitInfo.OperatorName</td></tr>
+                <tr><th>Received At</th><td>@CaseDetail.KitInfo.ReceivedAt.ToLocalTime().ToString("g")</td></tr>
+            </tbody>
+        </table>
+    }
+
+    <h4>Documents</h4>
+    @if (!CaseDetail.Documents.Any())
+    {
+        <p>No documents uploaded.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Document ID</th>
+                    <th>File Name</th>
+                    <th>Content Type</th>
+                    <th>Uploaded At</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var document in CaseDetail.Documents)
+                {
+                    <tr>
+                        <td>@document.DocumentId</td>
+                        <td>@document.FileName</td>
+                        <td>@document.ContentType</td>
+                        <td>@document.UploadedAt.ToLocalTime().ToString("g")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter]
+    public int CaseId { get; set; }
+
+    private CaseDetailsModel? CaseDetail;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            CaseDetail = await client.GetFromJsonAsync<CaseDetailsModel>($"api/cases/{CaseId}");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading case details: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/cases");
+    }
+}
