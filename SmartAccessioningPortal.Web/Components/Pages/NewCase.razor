@@ -8,6 +8,36 @@
 
 <h3>New Intake Case</h3>
 
+@if (ShowToast)
+{
+    <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #198754;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;">
+
+        <span>@ToastMessage</span>
+
+        <button @onclick="CloseToast"
+                style="
+                        background: transparent;
+                        border: none;
+                        color: white;
+                        font-size: 18px;
+                        cursor: pointer;">
+            ✖
+        </button>
+    </div>
+}
+
 @if (!string.IsNullOrWhiteSpace(StatusMessage))
 {
     <p>@StatusMessage</p>
@@ -82,11 +112,34 @@
     private string? StatusMessage;
     private IBrowserFile? SelectedFile;
     private string? SelectedFileName;
+    private bool ShowToast = false;
+    private string ToastMessage = string.Empty;
 
     private void HandleFileSelected(InputFileChangeEventArgs e)
     {
         SelectedFile = e.File;
         SelectedFileName = SelectedFile.Name;
+    }
+
+    private void CloseToast()
+    {
+        ShowToast = false;
+    }
+
+    private async Task ShowSuccessToast(string message)
+    {
+        ToastMessage = message;
+        ShowToast = true;
+
+        StateHasChanged();
+
+        await Task.Delay(5000);
+
+        if (ShowToast) 
+        {
+            ShowToast = false;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleSubmit()
@@ -161,7 +214,7 @@
             SelectedFile = null;
             SelectedFileName = null;
 
-            StatusMessage = $"Case {submittedCaseId} created successfully. Ready for a new intake.";
+            await ShowSuccessToast($"Case {submittedCaseId} created successfully");
         }
         catch (Exception ex)
         {
