@@ -1,4 +1,5 @@
 ﻿@page "/cases/new"
+@rendermode InteractiveServer
 @using System.Net.Http.Json
 @using SmartAccessioningPortal.Web.Models
 @inject IHttpClientFactory HttpClientFactory
@@ -12,54 +13,54 @@
     <p>@StatusMessage</p>
 }
 
-<EditForm Model="CaseModel" OnValidSubmit="HandleSubmit" FormName="NewCaseForm">
+<EditForm Model="FormModel" OnValidSubmit="HandleSubmit" FormName="NewCaseForm">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
     <h4>Case Information</h4>
     <div>
         <label>Created By:</label><br />
-        <InputText @bind-Value="CaseModel.CreatedBy" />
+        <InputText @bind-Value="FormModel.CreatedBy" />
     </div>
     <div>
         <label>Test Type:</label><br />
-        <InputText @bind-Value="CaseModel.TestType" />
+        <InputText @bind-Value="FormModel.TestType" />
     </div>
 
     <h4>Patient Information</h4>
     <div>
         <label>First Name:</label><br />
-        <InputText @bind-Value="PatientModel.FirstName" />
+        <InputText @bind-Value="FormModel.FirstName" />
     </div>
     <div>
         <label>Last Name:</label><br />
-        <InputText @bind-Value="PatientModel.LastName" />
+        <InputText @bind-Value="FormModel.LastName" />
     </div>
     <div>
         <label>DOB:</label><br />
-        <InputDate @bind-Value="PatientModel.DOB" />
+        <InputDate @bind-Value="FormModel.DOB" />
     </div>
     <div>
         <label>MRN:</label><br />
-        <InputText @bind-Value="PatientModel.MRN" />
+        <InputText @bind-Value="FormModel.MRN" />
     </div>
 
     <h4>Kit Information</h4>
     <div>
         <label>Kit Box Code:</label><br />
-        <InputText @bind-Value="KitModel.KitBoxCode" />
+        <InputText @bind-Value="FormModel.KitBoxCode" />
     </div>
     <div>
         <label>Lot Code:</label><br />
-        <InputText @bind-Value="KitModel.LotCode" />
+        <InputText @bind-Value="FormModel.LotCode" />
     </div>
     <div>
         <label>Operator Name:</label><br />
-        <InputText @bind-Value="KitModel.OperatorName" />
+        <InputText @bind-Value="FormModel.OperatorName" />
     </div>
     <div>
         <label>Received At:</label><br />
-        <InputDate @bind-Value="KitModel.ReceivedAt" />
+        <InputDate @bind-Value="FormModel.ReceivedAt" />
     </div>
     <h4>Requisition Upload</h4>
 
@@ -77,9 +78,7 @@
 </EditForm>
 
 @code {
-    private CreateCaseFormModel CaseModel { get; set; } = new();
-    private PatientFormModel PatientModel { get; set; } = new();
-    private KitInfoFormModel KitModel { get; set; } = new();
+    private IntakeFormModel FormModel { get; set; } = new();
     private string? StatusMessage;
     private IBrowserFile? SelectedFile;
     private string? SelectedFileName;
@@ -96,7 +95,12 @@
         {
             var client = HttpClientFactory.CreateClient("ApiClient");
 
-            var caseResponse = await client.PostAsJsonAsync("api/cases", CaseModel);
+            var caseResponse = await client.PostAsJsonAsync("api/cases", new
+            {
+                FormModel.CreatedBy,
+                FormModel.TestType
+            });
+
             caseResponse.EnsureSuccessStatusCode();
 
             var createdCase = await caseResponse.Content.ReadFromJsonAsync<CaseResponseModel>();
@@ -109,13 +113,25 @@
 
             var patientResponse = await client.PostAsJsonAsync(
                 $"api/cases/{createdCase.CaseId}/patient",
-                PatientModel);
+                new
+                {
+                    FormModel.FirstName,
+                    FormModel.LastName,
+                    FormModel.DOB,
+                    FormModel.MRN
+                });
 
             patientResponse.EnsureSuccessStatusCode();
 
             var kitResponse = await client.PostAsJsonAsync(
                 $"api/cases/{createdCase.CaseId}/kit-info",
-                KitModel);
+                new
+                {
+                    FormModel.KitBoxCode,
+                    FormModel.LotCode,
+                    FormModel.OperatorName,
+                    FormModel.ReceivedAt
+                });
 
             kitResponse.EnsureSuccessStatusCode();
             if (SelectedFile is not null)
@@ -134,8 +150,13 @@
 
                 uploadResponse.EnsureSuccessStatusCode();
             }
+            var submittedCaseId = createdCase.CaseId;
 
-            StatusMessage = $"Case {createdCase.CaseId} created successfully.";
+            FormModel = new IntakeFormModel();
+            SelectedFile = null;
+            SelectedFileName = null;
+
+            StatusMessage = $"Case {submittedCaseId} created successfully. Ready for a new intake.";
         }
         catch (Exception ex)
         {

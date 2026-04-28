@@ -98,6 +98,42 @@ public class CasesController : ControllerBase
 
         return Ok(intakeCase.Patient);
     }
+    [HttpPost("{id}/documents")]
+    public async Task<IActionResult> UploadDocument(int id, IFormFile file)
+    {
+        var intakeCase = await _context.Cases.FirstOrDefaultAsync(x => x.CaseId == id);
+
+        if (intakeCase == null)
+            return NotFound("Case not found.");
+
+        if (file == null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+        Directory.CreateDirectory(uploadsFolder);
+
+        var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var document = new Document
+        {
+            CaseId = id,
+            FileName = file.FileName,
+            FilePath = filePath,
+            ContentType = file.ContentType,
+            UploadedAt = DateTime.UtcNow
+        };
+
+        _context.Documents.Add(document);
+        await _context.SaveChangesAsync();
+
+        return Ok(document);
+    }
 
     // SAVE KIT INFO
     [HttpPost("{id}/kit-info")]
