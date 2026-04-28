@@ -21,8 +21,16 @@
         <button class="btn btn-outline-success" @onclick="@(() => SelectedStatus = "ReadyForReview")">
             Ready For Review
         </button>
+        <div style="margin-bottom:20px;">
+            <input class="form-control"
+                   placeholder="Search by Case ID, status, test type, or created by..."
+                   @bind="SearchText"
+                   @bind:event="oninput" />
+        </div>
     </div>
+
 }
+
 
 @if (!string.IsNullOrWhiteSpace(ErrorMessage))
 {
@@ -33,7 +41,7 @@
 {
     <p>Loading cases...</p>
 }
-else if (!CaseList.Any())
+else if (!FilteredCases.Any())
 {
     <p>No cases found.</p>
 }
@@ -73,23 +81,45 @@ else
 @code {
     private List<CaseListItemModel>? CaseList;
     private string? ErrorMessage;
+    private string SearchText { get; set; } = string.Empty;
+
 
     private string SelectedStatus = "All";
 
-    private IEnumerable<CaseListItemModel> FilteredCases =>
-        SelectedStatus == "All"
-            ? CaseList ?? []
-            : CaseList?.Where(x => x.Status == SelectedStatus) ?? [];
+    private IEnumerable<CaseListItemModel> FilteredCases
+    {
+        get
+        {
+            var query = CaseList ?? [];
+
+            if (SelectedStatus != "All")
+            {
+                query = query.Where(x => x.Status == SelectedStatus).ToList();
+            }
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                query = query.Where(x =>
+                    x.CaseId.ToString().Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    x.Status.Contains(SearchText, StringComparison.OrdinalIgnoreCase) ||
+                    (x.TestType != null && x.TestType.Contains(SearchText, StringComparison.OrdinalIgnoreCase)) ||
+                    x.CreatedBy.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+            }
+
+            return query;
+        }
+    }
 
     private string GetStatusBadgeStyle(string status)
-{
-    return status switch
     {
-        "ReadyForReview" => "background-color:#d1e7dd; color:#0f5132; padding:4px 8px; border-radius:8px;",
-        "Draft" => "background-color:#fff3cd; color:#664d03; padding:4px 8px; border-radius:8px;",
-        _ => "background-color:#e2e3e5; color:#41464b; padding:4px 8px; border-radius:8px;"
-    };
-}
+        return status switch
+        {
+            "ReadyForReview" => "background-color:#d1e7dd; color:#0f5132; padding:4px 8px; border-radius:8px;",
+            "Draft" => "background-color:#fff3cd; color:#664d03; padding:4px 8px; border-radius:8px;",
+            _ => "background-color:#e2e3e5; color:#41464b; padding:4px 8px; border-radius:8px;"
+        };
+    }
 
     protected override async Task OnInitializedAsync()
     {
