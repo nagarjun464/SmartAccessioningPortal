@@ -5,8 +5,50 @@
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
 
 <h3>New Intake Case</h3>
+
+@if (ShowPreviewModal)
+{
+    <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0,0,0,0.6);
+                z-index: 2000;
+                display: flex;
+                align-items: center;
+                justify-content: center;">
+
+        <div style="
+                    background-color: white;
+                    width: 80%;
+                    height: 85%;
+                    border-radius: 8px;
+                    padding: 15px;
+                    display: flex;
+                    flex-direction: column;">
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h4 style="margin:0;">Requisition Preview</h4>
+
+                <button type="button"
+                        class="btn btn-sm btn-danger"
+                        @onclick="ClosePdfPreview">
+                    Close
+                </button>
+            </div>
+
+            <iframe src="@PreviewDocumentUrl"
+                    style="width:100%; height:100%; border:1px solid #ccc;">
+            </iframe>
+        </div>
+    </div>
+}
 
 @if (ShowToast)
 {
@@ -96,7 +138,18 @@
 
     <div>
         <label>Upload Requisition PDF/Image:</label><br />
-        <InputFile OnChange="HandleFileSelected" />
+        <InputFile id="reqFileInput"
+                   OnChange="HandleFileSelected"
+                   accept="application/pdf" />
+        <button type="button"
+                class="btn btn-sm btn-primary"
+                @onclick="ShowPdfPreview">
+            Preview Document
+        </button>  
+    </div>
+    <div style="margin-top:10px;">
+        <input type="checkbox" @bind="IsDocumentVerified" />
+        <label>I confirm this is the correct requisition document</label>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(SelectedFileName))
@@ -115,11 +168,53 @@
     private bool ShowToast = false;
     private string ToastMessage = string.Empty;
     private string ToastBackgroundColor = "#198754";
+    private bool ShowPreviewModal;
+    private string? PreviewDocumentUrl;
+    private bool IsDocumentVerified;
 
-    private void HandleFileSelected(InputFileChangeEventArgs e)
+    private async Task ShowPdfPreview()
     {
-        SelectedFile = e.File;
-        SelectedFileName = SelectedFile.Name;
+        if (string.IsNullOrWhiteSpace(PreviewDocumentUrl))
+        {
+            await ShowErrorToast("No document selected for preview.");
+            return;
+        }
+
+        ShowPreviewModal = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClosePdfPreview()
+    {
+        ShowPreviewModal = false;
+
+        if (!string.IsNullOrWhiteSpace(PreviewDocumentUrl))
+        {
+            await JSRuntime.InvokeVoidAsync("pdfPreview.revokeUrl", PreviewDocumentUrl);
+        }
+    }
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file.ContentType != "application/pdf")
+        {
+            SelectedFile = null;
+            SelectedFileName = null;
+            PreviewDocumentUrl = null;
+            IsDocumentVerified = false;
+
+            await ShowErrorToast("Only PDF files are allowed.");
+            return;
+        }
+
+        SelectedFile = file;
+        SelectedFileName = file.Name;
+        IsDocumentVerified = false;
+
+        PreviewDocumentUrl = await JSRuntime.InvokeAsync<string?>(
+            "pdfPreview.createUrl",
+            "reqFileInput");
     }
 
     private void CloseToast()
@@ -157,8 +252,14 @@
 
     private async Task HandleSubmit()
     {
+
         try
         {
+            if (SelectedFile != null && !IsDocumentVerified)
+            {
+                await ShowErrorToast("Please preview and verify the uploaded document before submitting.");
+                return;
+            }
             var client = HttpClientFactory.CreateClient("ApiClient");
 
             var caseResponse = await client.PostAsJsonAsync("api/cases", new
@@ -223,12 +324,16 @@
 
             statusResponse.EnsureSuccessStatusCode();
 
+            PreviewDocumentUrl = null;
+            IsDocumentVerified = false;
+            ShowPreviewModal = false;
             FormModel = new IntakeFormModel();
             SelectedFile = null;
             SelectedFileName = null;
 
             await ShowSuccessToast($"Case {submittedCaseId} created successfully");
         }
+
         catch (Exception ex)
         {
             await ShowErrorToast($"Error: {ex.Message}");

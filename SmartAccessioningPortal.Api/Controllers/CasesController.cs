@@ -93,6 +93,23 @@ public class CasesController : ControllerBase
         return Ok(cases);
     }
 
+    [HttpGet("documents/{documentId}/download")]
+    public async Task<IActionResult> DownloadDocument(int documentId)
+    {
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(x => x.DocumentId == documentId);
+
+        if (document == null)
+            return NotFound("Document not found.");
+
+        if (!System.IO.File.Exists(document.FilePath))
+            return NotFound("File not found on server.");
+
+        var fileBytes = await System.IO.File.ReadAllBytesAsync(document.FilePath);
+
+        return File(fileBytes, document.ContentType, document.FileName);
+    }
+
     // SAVE PATIENT
     [HttpPost("{id}/patient")]
     public async Task<IActionResult> SavePatient(int id, SavePatientRequest request)
