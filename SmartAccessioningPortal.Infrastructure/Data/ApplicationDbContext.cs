@@ -15,6 +15,8 @@ public class ApplicationDbContext : DbContext
     public DbSet<KitInfo> KitInfos => Set<KitInfo>();
     public DbSet<Document> Documents => Set<Document>();
 
+    public DbSet<TubePhoto> TubePhotos => Set<TubePhoto>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -62,6 +64,19 @@ public class ApplicationDbContext : DbContext
 
             entity.HasOne(x => x.Case)
                 .WithMany(x => x.Documents)
+                .HasForeignKey(x => x.CaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TubePhoto>(entity =>
+        {
+            entity.HasKey(x => x.TubePhotoId);
+            entity.Property(x => x.FileName).HasMaxLength(255).IsRequired();
+            entity.Property(x => x.FilePath).HasMaxLength(500).IsRequired();
+            entity.Property(x => x.ContentType).HasMaxLength(100).IsRequired();
+
+            entity.HasOne<Case>()
+                .WithMany()
                 .HasForeignKey(x => x.CaseId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
