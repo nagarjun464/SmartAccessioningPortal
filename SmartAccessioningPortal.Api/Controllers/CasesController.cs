@@ -183,6 +183,46 @@ public class CasesController : ControllerBase
         return Ok(document);
     }
 
+    [HttpPost("{id}/tube-photos")]
+    public async Task<IActionResult> UploadTubePhoto(int id, IFormFile file)
+    {
+        var intakeCase = await _context.Cases.FirstOrDefaultAsync(x => x.CaseId == id);
+
+        if (intakeCase == null)
+            return NotFound("Case not found.");
+
+        if (file == null || file.Length == 0)
+            return BadRequest("No file uploaded.");
+
+        if (!file.ContentType.StartsWith("image/"))
+            return BadRequest("Only image files are allowed for tube photos.");
+
+        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", "TubePhotos");
+        Directory.CreateDirectory(uploadsFolder);
+
+        var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        await using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var tubePhoto = new TubePhoto
+        {
+            CaseId = id,
+            FileName = file.FileName,
+            FilePath = filePath,
+            ContentType = file.ContentType,
+            CapturedAt = DateTime.UtcNow
+        };
+
+        _context.TubePhotos.Add(tubePhoto);
+        await _context.SaveChangesAsync();
+
+        return Ok(tubePhoto);
+    }
+
     // SAVE KIT INFO
     [HttpPost("{id}/kit-info")]
     public async Task<IActionResult> SaveKitInfo(int id, SaveKitInfoRequest request)
