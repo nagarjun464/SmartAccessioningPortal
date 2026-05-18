@@ -151,13 +151,26 @@
         <input type="checkbox" @bind="IsDocumentVerified" />
         <label>I confirm this is the correct requisition document</label>
     </div>
-
     @if (!string.IsNullOrWhiteSpace(SelectedFileName))
     {
         <p>Selected file: @SelectedFileName</p>
     }
     <br />
     <button type="submit">Save Intake Case</button>
+
+    <h4>Tube Photo Upload</h4>
+
+    <div>
+        <label>Upload Tube Photo:</label><br />
+        <InputFile OnChange="HandleTubePhotoSelected" accept="image/*" />
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(SelectedTubePhotoName))
+    {
+        <p>Selected tube photo: @SelectedTubePhotoName</p>
+    }
+
+    
 </EditForm>
 
 @code {
@@ -171,6 +184,25 @@
     private bool ShowPreviewModal;
     private string? PreviewDocumentUrl;
     private bool IsDocumentVerified;
+    private IBrowserFile? SelectedTubePhoto;
+    private string? SelectedTubePhotoName;
+
+    private async Task HandleTubePhotoSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (!file.ContentType.StartsWith("image/"))
+        {
+            SelectedTubePhoto = null;
+            SelectedTubePhotoName = null;
+
+            await ShowErrorToast("Only image files are allowed for tube photos.");
+            return;
+        }
+
+        SelectedTubePhoto = file;
+        SelectedTubePhotoName = file.Name;
+    }
 
     private async Task ShowPdfPreview()
     {
@@ -324,6 +356,27 @@
 
             statusResponse.EnsureSuccessStatusCode();
 
+            if (SelectedTubePhoto is not null)
+            {
+                using var tubeContent = new MultipartFormDataContent();
+
+                var tubeFileContent = new StreamContent(
+                    SelectedTubePhoto.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024));
+
+                tubeFileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue(SelectedTubePhoto.ContentType);
+
+                tubeContent.Add(tubeFileContent, "file", SelectedTubePhoto.Name);
+
+                var tubeUploadResponse = await client.PostAsync(
+                    $"api/cases/{createdCase.CaseId}/tube-photos",
+                    tubeContent);
+
+                tubeUploadResponse.EnsureSuccessStatusCode();
+            }
+
+            SelectedTubePhoto = null;
+            SelectedTubePhotoName = null;
             PreviewDocumentUrl = null;
             IsDocumentVerified = false;
             ShowPreviewModal = false;
