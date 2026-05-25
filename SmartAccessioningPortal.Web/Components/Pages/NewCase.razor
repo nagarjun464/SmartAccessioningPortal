@@ -191,18 +191,33 @@
         <canvas id="tubeCanvas" style="display:none;"></canvas>
     </div>
 
-    @if (!string.IsNullOrWhiteSpace(CapturedTubePhotoPreview))
-    {
-        <div style="margin-top:10px;">
-            <p>Captured tube photo:</p>
-            <img src="@CapturedTubePhotoPreview"
-                 style="width:250px; border:1px solid #ccc;" />
-        </div>
-    }
-
     @if (!string.IsNullOrWhiteSpace(SelectedFileName))
     {
         <p>Selected file: @SelectedFileName</p>
+    }
+
+    @if (CapturedTubePhotos.Any())
+    {
+        <div style="margin-top:10px;">
+            <p>Captured tube photos:</p>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                @foreach (var photo in CapturedTubePhotos)
+                {
+                    <div style="border:1px solid #ccc; padding:8px; width:180px;">
+                        <img src="@photo.PreviewUrl"
+                             style="width:160px; height:120px; object-fit:cover;" />
+
+                        <button type="button"
+                                class="btn btn-sm btn-danger"
+                                style="margin-top:6px;"
+                                @onclick="() => RemoveCapturedTubePhoto(photo)">
+                            Delete
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
     }
     <br />
     <button type="submit">Save Intake Case</button>
@@ -221,8 +236,14 @@
     private bool IsDocumentVerified;
     private IBrowserFile? SelectedTubePhoto;
     private string? SelectedTubePhotoName;
-    private string? CapturedTubePhotoPreview;
-    private byte[]? CapturedTubePhotoBytes;
+    private List<CapturedTubePhotoModel> CapturedTubePhotos { get; set; } = new();
+
+    private class CapturedTubePhotoModel
+    {
+        public string PreviewUrl { get; set; } = string.Empty;
+        public byte[] Bytes { get; set; } = Array.Empty<byte>();
+        public string FileName { get; set; } = string.Empty;
+    }
 
     private async Task StartCamera()
     {
@@ -249,10 +270,20 @@
             return;
         }
 
-        CapturedTubePhotoPreview = dataUrl;
-
         var base64Data = dataUrl.Split(',')[1];
-        CapturedTubePhotoBytes = Convert.FromBase64String(base64Data);
+        var bytes = Convert.FromBase64String(base64Data);
+
+        CapturedTubePhotos.Add(new CapturedTubePhotoModel
+        {
+            PreviewUrl = dataUrl,
+            Bytes = bytes,
+            FileName = $"tube-photo-{DateTime.UtcNow:yyyyMMddHHmmssfff}.jpg"
+        });
+    }
+
+    private void RemoveCapturedTubePhoto(CapturedTubePhotoModel photo)
+    {
+        CapturedTubePhotos.Remove(photo);
     }
 
     private async Task StopCamera()
@@ -366,7 +397,7 @@
                 return;
             }
 
-            if (SelectedTubePhoto is null && CapturedTubePhotoBytes is null)
+            if (SelectedTubePhoto is null && !CapturedTubePhotos.Any())
             {
                 await ShowErrorToast("Please upload or capture at least one tube photo before submitting.");
                 return;
@@ -459,17 +490,15 @@
                 tubeUploadResponse.EnsureSuccessStatusCode();
             }
 
-            if (CapturedTubePhotoBytes is not null)
+            foreach (var photo in CapturedTubePhotos)
             {
                 using var capturedContent = new MultipartFormDataContent();
 
-                var capturedFileContent = new ByteArrayContent(CapturedTubePhotoBytes);
+                var capturedFileContent = new ByteArrayContent(photo.Bytes);
                 capturedFileContent.Headers.ContentType =
                     new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
 
-                var capturedFileName = $"tube-photo-{DateTime.UtcNow:yyyyMMddHHmmss}.jpg";
-
-                capturedContent.Add(capturedFileContent, "file", capturedFileName);
+                capturedContent.Add(capturedFileContent, "file", photo.FileName);
 
                 var capturedUploadResponse = await client.PostAsync(
                     $"api/cases/{createdCase.CaseId}/tube-photos",
@@ -478,8 +507,7 @@
                 capturedUploadResponse.EnsureSuccessStatusCode();
             }
 
-            CapturedTubePhotoPreview = null;
-            CapturedTubePhotoBytes = null;
+            CapturedTubePhotos.Clear();
             await StopCamera();
             SelectedTubePhoto = null;
             SelectedTubePhotoName = null;
