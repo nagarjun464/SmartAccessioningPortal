@@ -109,6 +109,7 @@ else
     public int CaseId { get; set; }
 
     private CaseDetailsModel? CaseDetail;
+    private List<TubePhotoModel> TubePhotos = new();
     private string? ErrorMessage;
     private string GetDocumentDownloadUrl(int documentId)
     {
@@ -121,6 +122,7 @@ else
         {
             var client = HttpClientFactory.CreateClient("ApiClient");
             CaseDetail = await client.GetFromJsonAsync<CaseDetailsModel>($"api/cases/{CaseId}");
+            TubePhotos = await client.GetFromJsonAsync<List<TubePhotoModel>>($"api/cases/{CaseId}/tube-photos")?? new();
         }
         catch (Exception ex)
         {

@@ -14,12 +14,20 @@
         });
 
         video.srcObject = this.stream;
-        await video.play();
+        video.muted = true;
+        video.playsInline = true;
+
+        await new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+                video.play();
+                resolve();
+            };
+        });
 
         return true;
     },
 
-    capturePhoto: function (videoId, canvasId) {
+    capturePhoto: async function (videoId, canvasId) {
         const video = document.getElementById(videoId);
         const canvas = document.getElementById(canvasId);
 
@@ -27,13 +35,27 @@
             return null;
         }
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+            return null;
+        }
+
+        const maxWidth = 640;
+        const scale = maxWidth / video.videoWidth;
+
+        canvas.width = maxWidth;
+        canvas.height = video.videoHeight * scale;
 
         const context = canvas.getContext("2d");
+
+        if (!context) {
+            return null;
+        }
+
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        return canvas.toDataURL("image/jpeg", 0.9);
+        return canvas.toDataURL("image/jpeg", 0.6);
     },
 
     stopCamera: function () {

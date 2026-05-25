@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SmartAccessioningPortal.Application.Models;
+using SmartAccessioningPortal.Application.Models.Responses;
 using SmartAccessioningPortal.Domain.Entities;
 using SmartAccessioningPortal.Infrastructure.Data;
 
@@ -181,6 +182,30 @@ public class CasesController : ControllerBase
         await _context.SaveChangesAsync();
 
         return Ok(document);
+    }
+
+    [HttpGet("{id}/tube-photos")]
+    public async Task<IActionResult> GetTubePhotos(int id)
+    {
+        var intakeCase = await _context.Cases
+            .FirstOrDefaultAsync(x => x.CaseId == id);
+
+        if (intakeCase == null)
+            return NotFound("Case not found.");
+
+        var photos = await _context.TubePhotos
+            .Where(x => x.CaseId == id)
+            .OrderByDescending(x => x.CapturedAt)
+            .Select(x => new TubePhotoResponse
+            {
+                TubePhotoId = x.TubePhotoId,
+                FileName = x.FileName,
+                ImageUrl = $"/uploads/tubephotos/{Path.GetFileName(x.FilePath)}",
+                CapturedAt = x.CapturedAt
+            })
+            .ToListAsync();
+
+        return Ok(photos);
     }
 
     [HttpPost("{id}/tube-photos")]

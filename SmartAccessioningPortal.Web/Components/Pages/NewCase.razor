@@ -151,12 +151,6 @@
         <input type="checkbox" @bind="IsDocumentVerified" />
         <label>I confirm this is the correct requisition document</label>
     </div>
-    @if (!string.IsNullOrWhiteSpace(SelectedFileName))
-    {
-        <p>Selected file: @SelectedFileName</p>
-    }
-    <br />
-    <button type="submit">Save Intake Case</button>
 
     <h4>Tube Photo Upload</h4>
 
@@ -170,7 +164,48 @@
         <p>Selected tube photo: @SelectedTubePhotoName</p>
     }
 
-    
+    <h5>Or Capture Tube Photo</h5>
+
+    <div style="margin-top:10px;">
+        <button type="button" class="btn btn-secondary" @onclick="StartCamera">
+            Start Camera
+        </button>
+
+        <button type="button" class="btn btn-primary" @onclick="CaptureTubePhoto">
+            Capture Photo
+        </button>
+
+        <button type="button" class="btn btn-danger" @onclick="StopCamera">
+            Stop Camera
+        </button>
+    </div>
+
+    <div style="margin-top:10px;">
+        <video id="tubeVideo"
+               style="width:350px; border:1px solid #ccc;"
+               autoplay
+               muted
+               playsinline>
+        </video>
+
+        <canvas id="tubeCanvas" style="display:none;"></canvas>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(CapturedTubePhotoPreview))
+    {
+        <div style="margin-top:10px;">
+            <p>Captured tube photo:</p>
+            <img src="@CapturedTubePhotoPreview"
+                 style="width:250px; border:1px solid #ccc;" />
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(SelectedFileName))
+    {
+        <p>Selected file: @SelectedFileName</p>
+    }
+    <br />
+    <button type="submit">Save Intake Case</button>
 </EditForm>
 
 @code {
@@ -186,6 +221,44 @@
     private bool IsDocumentVerified;
     private IBrowserFile? SelectedTubePhoto;
     private string? SelectedTubePhotoName;
+    private string? CapturedTubePhotoPreview;
+    private byte[]? CapturedTubePhotoBytes;
+
+    private async Task StartCamera()
+    {
+        try
+        {
+            await JSRuntime.InvokeAsync<bool>("cameraCapture.startCamera", "tubeVideo");
+        }
+        catch
+        {
+            await ShowErrorToast("Unable to access camera. Please allow camera permission.");
+        }
+    }
+
+    private async Task CaptureTubePhoto()
+    {
+        var dataUrl = await JSRuntime.InvokeAsync<string?>(
+            "cameraCapture.capturePhoto",
+            "tubeVideo",
+            "tubeCanvas");
+
+        if (string.IsNullOrWhiteSpace(dataUrl))
+        {
+            await ShowErrorToast("Unable to capture tube photo.");
+            return;
+        }
+
+        CapturedTubePhotoPreview = dataUrl;
+
+        var base64Data = dataUrl.Split(',')[1];
+        CapturedTubePhotoBytes = Convert.FromBase64String(base64Data);
+    }
+
+    private async Task StopCamera()
+    {
+        await JSRuntime.InvokeVoidAsync("cameraCapture.stopCamera");
+    }
 
     private async Task HandleTubePhotoSelected(InputFileChangeEventArgs e)
     {
@@ -287,6 +360,17 @@
 
         try
         {
+            if (SelectedFile is null)
+            {
+                await ShowErrorToast("Please upload a requisition PDF before submitting.");
+                return;
+            }
+
+            if (SelectedTubePhoto is null && CapturedTubePhotoBytes is null)
+            {
+                await ShowErrorToast("Please upload or capture at least one tube photo before submitting.");
+                return;
+            }
             if (SelectedFile != null && !IsDocumentVerified)
             {
                 await ShowErrorToast("Please preview and verify the uploaded document before submitting.");
@@ -375,6 +459,28 @@
                 tubeUploadResponse.EnsureSuccessStatusCode();
             }
 
+            if (CapturedTubePhotoBytes is not null)
+            {
+                using var capturedContent = new MultipartFormDataContent();
+
+                var capturedFileContent = new ByteArrayContent(CapturedTubePhotoBytes);
+                capturedFileContent.Headers.ContentType =
+                    new System.Net.Http.Headers.MediaTypeHeaderValue("image/jpeg");
+
+                var capturedFileName = $"tube-photo-{DateTime.UtcNow:yyyyMMddHHmmss}.jpg";
+
+                capturedContent.Add(capturedFileContent, "file", capturedFileName);
+
+                var capturedUploadResponse = await client.PostAsync(
+                    $"api/cases/{createdCase.CaseId}/tube-photos",
+                    capturedContent);
+
+                capturedUploadResponse.EnsureSuccessStatusCode();
+            }
+
+            CapturedTubePhotoPreview = null;
+            CapturedTubePhotoBytes = null;
+            await StopCamera();
             SelectedTubePhoto = null;
             SelectedTubePhotoName = null;
             PreviewDocumentUrl = null;
