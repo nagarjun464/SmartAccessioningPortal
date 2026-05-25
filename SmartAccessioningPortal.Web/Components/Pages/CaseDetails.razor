@@ -102,6 +102,55 @@ else
             </tbody>
         </table>
     }
+
+    <h4>Tube Photos</h4>
+
+    @if (!TubePhotos.Any())
+    {
+        <p>No tube photos uploaded.</p>
+    }
+    else
+    {
+        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+            @foreach (var photo in TubePhotos)
+            {
+                <div style="border:1px solid #ccc; padding:10px; width:220px;">
+                    <img src="@GetFullImageUrl(photo.ImageUrl)"
+                         style="width:200px; height:160px; object-fit:cover; cursor:pointer;"
+                         @onclick="() => OpenTubePhoto(photo.ImageUrl)" />
+
+                    <p>@photo.FileName</p>
+                    <small>@photo.CapturedAt.ToLocalTime().ToString("g")</small>
+                </div>
+            }
+        </div>
+    }
+    @if (ShowTubePhotoModal)
+    {
+        <div style="
+                position:fixed;
+                top:0;
+                left:0;
+                width:100%;
+                height:100%;
+                background-color:rgba(0,0,0,0.7);
+                z-index:9999;
+                display:flex;
+                justify-content:center;
+                align-items:center;">
+
+            <div style="background:white; padding:20px; border-radius:8px;">
+                <button class="btn btn-danger" @onclick="CloseTubePhotoModal">
+                    Close
+                </button>
+
+                <div style="margin-top:10px;">
+                    <img src="@GetFullImageUrl(SelectedTubePhotoUrl!)"
+                         style="max-width:900px; max-height:80vh;" />
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -109,11 +158,32 @@ else
     public int CaseId { get; set; }
 
     private CaseDetailsModel? CaseDetail;
-    private List<TubePhotoModel> TubePhotos = new();
     private string? ErrorMessage;
+    private List<TubePhotoModel> TubePhotos { get; set; } = new();
+    private bool ShowTubePhotoModal;
+    private string? SelectedTubePhotoUrl;
+
+    private void OpenTubePhoto(string imageUrl)
+    {
+        SelectedTubePhotoUrl = imageUrl;
+        ShowTubePhotoModal = true;
+    }
+
+    private void CloseTubePhotoModal()
+    {
+        ShowTubePhotoModal = false;
+        SelectedTubePhotoUrl = null;
+    }
+
     private string GetDocumentDownloadUrl(int documentId)
+
     {
         return $"https://localhost:7093/api/cases/documents/{documentId}/download";
+    }
+
+    private string GetFullImageUrl(string imageUrl)
+    {
+        return $"https://localhost:7093{imageUrl}";
     }
 
     protected override async Task OnInitializedAsync()
@@ -122,7 +192,8 @@ else
         {
             var client = HttpClientFactory.CreateClient("ApiClient");
             CaseDetail = await client.GetFromJsonAsync<CaseDetailsModel>($"api/cases/{CaseId}");
-            TubePhotos = await client.GetFromJsonAsync<List<TubePhotoModel>>($"api/cases/{CaseId}/tube-photos")?? new();
+            TubePhotos = await client.GetFromJsonAsync<List<TubePhotoModel>>(
+    $"api/cases/{CaseId}/tube-photos") ?? new();
         }
         catch (Exception ex)
         {
