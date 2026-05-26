@@ -158,7 +158,7 @@ public class CasesController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("No file uploaded.");
 
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads");
+        var uploadsFolder = Path.Combine(Path.GetTempPath(), "Uploads");
         Directory.CreateDirectory(uploadsFolder);
 
         var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
@@ -222,7 +222,7 @@ public class CasesController : ControllerBase
         if (!file.ContentType.StartsWith("image/"))
             return BadRequest("Only image files are allowed for tube photos.");
 
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", "TubePhotos");
+        var uploadsFolder = Path.Combine(Path.GetTempPath(), "Uploads", "TubePhotos");
         Directory.CreateDirectory(uploadsFolder);
 
         var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";

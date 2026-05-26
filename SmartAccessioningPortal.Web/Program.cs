@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using SmartAccessioningPortal.Web.Components;
 using SmartAccessioningPortal.Web.Configuration;
 
@@ -13,8 +14,8 @@ builder.Services.Configure<ApiSettings>(
 builder.Services.AddHttpClient("ApiClient", (serviceProvider, client) =>
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-    var baseUrl = configuration["ApiSettings:BaseUrl"];
-    client.BaseAddress = new Uri(baseUrl!);
+    var baseUrl = "https://smart-accessioning-api-235092307336.us-central1.run.app/";
+    client.BaseAddress = new Uri(baseUrl);
 });
 
 var app = builder.Build();
