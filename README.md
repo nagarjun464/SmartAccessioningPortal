@@ -9,8 +9,10 @@ It allows intake staff (CDOs) to upload requisition forms, extract data automati
 In accessioning workflows, requisitions often:
 - contain missing or incorrect data
 - require manual entry
-- cause delays in processing
-- increase turnaround time for patients
+- increase turnaround times
+- reduce operational efficiency
+- introduce accessioning bottlenecks
+- impact patient reporting timelines
 
 ## Solution
 This system:
@@ -35,6 +37,26 @@ This system:
 - Camera capture for tube photos
 - Accessioning workflow dashboard
 - GCP deployment (Cloud Run, Document AI, Cloud Storage)
+
+## Deployment
+
+### Google Cloud Platform (GCP)
+- Google Cloud Run (Frontend + API)
+- Docker containerization
+- Artifact Registry
+- Cloud SQL PostgreSQL (planned)
+- Cloud Storage (planned)
+
+### CI/CD
+- GitHub repository integration
+- Planned GitHub Actions deployment workflow
+
+## Screenshots
+- Intake Case Form
+- PDF Verification Modal
+- Tube Photo Capture
+- Swagger API
+- GCP Cloud Run Deployment
 
 ## Tech Stack
 - ASP.NET Core Web API
