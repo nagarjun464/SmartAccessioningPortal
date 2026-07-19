@@ -11,6 +11,7 @@ env:
   SERVICE_NAME: smart-accessioning-api
   IMAGE_NAME: smart-accessioning-api
   REPOSITORY: cloud-run-source-deploy
+  RUNTIME_SERVICE_ACCOUNT: 235092307336-compute@developer.gserviceaccount.com
 
 jobs:
   deploy:
@@ -49,4 +50,10 @@ jobs:
           gcloud run deploy $SERVICE_NAME \
             --image $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE_NAME:${{ github.sha }} \
             --region $REGION \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --service-account $RUNTIME_SERVICE_ACCOUNT \
+            --network default \
+            --subnet default \
+            --vpc-egress private-ranges-only \
+            --set-secrets ConnectionStrings__DefaultConnection=smart-accessioning-db-connection:latest \
+            --set-env-vars Database__Provider=SqlServer,Database__ApplyMigrationsOnStartup=true,Storage__Provider=Gcp,GcpStorage__BucketName=smart-accessioning-files-nagarjun,DemoSeed__Enabled=true,DemoSeed__PatientCount=25,DemoSeed__CaseCount=40
