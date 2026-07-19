@@ -1,4 +1,4 @@
-﻿namespace SmartAccessioningPortal.Web.Models;
+namespace SmartAccessioningPortal.Domain.Entities;
 
 public class TubePhotoModel
 {

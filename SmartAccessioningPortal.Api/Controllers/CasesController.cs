@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SmartAccessioningPortal.Api.Services;
 using SmartAccessioningPortal.Application.Models;
 using SmartAccessioningPortal.Application.Models.Responses;
 using SmartAccessioningPortal.Domain.Entities;
@@ -12,13 +13,14 @@ namespace SmartAccessioningPortal.Api.Controllers;
 public class CasesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorage;
 
-    public CasesController(ApplicationDbContext context)
+    public CasesController(ApplicationDbContext context, IFileStorageService fileStorage)
     {
         _context = context;
+        _fileStorage = fileStorage;
     }
 
-    // CREATE CASE
     [HttpPost]
     public async Task<IActionResult> CreateCase(CreateCaseRequest request)
     {
@@ -36,9 +38,6 @@ public class CasesController : ControllerBase
         return Ok(intakeCase);
     }
 
-    
-
-    // GET CASE BY ID
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCaseById(int id)
     {
@@ -103,15 +102,14 @@ public class CasesController : ControllerBase
         if (document == null)
             return NotFound("Document not found.");
 
-        if (!System.IO.File.Exists(document.FilePath))
+        var download = await _fileStorage.OpenReadAsync(document.FilePath, document.ContentType);
+
+        if (download is null)
             return NotFound("File not found on server.");
 
-        var fileBytes = await System.IO.File.ReadAllBytesAsync(document.FilePath);
-
-        return File(fileBytes, document.ContentType, document.FileName);
+        return File(download.Stream, download.ContentType, document.FileName);
     }
 
-    // SAVE PATIENT
     [HttpPost("{id}/patient")]
     public async Task<IActionResult> SavePatient(int id, SavePatientRequest request)
     {
@@ -147,6 +145,7 @@ public class CasesController : ControllerBase
 
         return Ok(intakeCase.Patient);
     }
+
     [HttpPost("{id}/documents")]
     public async Task<IActionResult> UploadDocument(int id, IFormFile file)
     {
@@ -158,22 +157,13 @@ public class CasesController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest("No file uploaded.");
 
-        var uploadsFolder = Path.Combine(Path.GetTempPath(), "Uploads");
-        Directory.CreateDirectory(uploadsFolder);
-
-        var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-        await using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
+        var storedFile = await _fileStorage.SaveAsync("documents", file);
 
         var document = new Document
         {
             CaseId = id,
             FileName = file.FileName,
-            FilePath = filePath,
+            FilePath = storedFile.StoragePath,
             ContentType = file.ContentType,
             UploadedAt = DateTime.UtcNow
         };
@@ -200,12 +190,29 @@ public class CasesController : ControllerBase
             {
                 TubePhotoId = x.TubePhotoId,
                 FileName = x.FileName,
-                ImageUrl = $"/uploads/tubephotos/{Path.GetFileName(x.FilePath)}",
+                ImageUrl = $"/api/cases/tube-photos/{x.TubePhotoId}/content",
                 CapturedAt = x.CapturedAt
             })
             .ToListAsync();
 
         return Ok(photos);
+    }
+
+    [HttpGet("tube-photos/{tubePhotoId}/content")]
+    public async Task<IActionResult> DownloadTubePhoto(int tubePhotoId)
+    {
+        var photo = await _context.TubePhotos
+            .FirstOrDefaultAsync(x => x.TubePhotoId == tubePhotoId);
+
+        if (photo == null)
+            return NotFound("Tube photo not found.");
+
+        var download = await _fileStorage.OpenReadAsync(photo.FilePath, photo.ContentType);
+
+        if (download is null)
+            return NotFound("File not found on server.");
+
+        return File(download.Stream, download.ContentType, photo.FileName);
     }
 
     [HttpPost("{id}/tube-photos")]
@@ -222,22 +229,13 @@ public class CasesController : ControllerBase
         if (!file.ContentType.StartsWith("image/"))
             return BadRequest("Only image files are allowed for tube photos.");
 
-        var uploadsFolder = Path.Combine(Path.GetTempPath(), "Uploads", "TubePhotos");
-        Directory.CreateDirectory(uploadsFolder);
-
-        var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
-        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-        await using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
+        var storedFile = await _fileStorage.SaveAsync("tubephotos", file);
 
         var tubePhoto = new TubePhoto
         {
             CaseId = id,
             FileName = file.FileName,
-            FilePath = filePath,
+            FilePath = storedFile.StoragePath,
             ContentType = file.ContentType,
             CapturedAt = DateTime.UtcNow
         };
@@ -248,7 +246,6 @@ public class CasesController : ControllerBase
         return Ok(tubePhoto);
     }
 
-    // SAVE KIT INFO
     [HttpPost("{id}/kit-info")]
     public async Task<IActionResult> SaveKitInfo(int id, SaveKitInfoRequest request)
     {
