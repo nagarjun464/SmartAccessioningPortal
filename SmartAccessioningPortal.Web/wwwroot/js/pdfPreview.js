@@ -8,10 +8,6 @@
 
         const file = input.files[0];
 
-        if (file.type !== "application/pdf") {
-            return null;
-        }
-
         return URL.createObjectURL(file);
     },
 

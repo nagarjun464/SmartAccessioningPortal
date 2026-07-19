@@ -1,157 +1,219 @@
-﻿@page "/cases/{CaseId:int}"
+@page "/cases/{CaseId:int}"
 @rendermode InteractiveServer
 @using System.Net.Http.Json
 @using SmartAccessioningPortal.Web.Models
 @inject IHttpClientFactory HttpClientFactory
 @inject NavigationManager NavigationManager
 
-<h3>Case Details</h3>
+<PageTitle>Case @CaseId</PageTitle>
 
-@if (!string.IsNullOrWhiteSpace(ErrorMessage))
-{
-    <p style="color:red">@ErrorMessage</p>
-}
+<div class="portal-page">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Case record</p>
+            <h1>CASE-@CaseId.ToString("D5")</h1>
+            <p>Review accessioning metadata, requisition documents, and tube photo evidence.</p>
+        </div>
+        <div class="heading-actions">
+            <button type="button" class="btn btn-secondary" @onclick="GoBack">Back to Queue</button>
+        </div>
+    </div>
 
-@if (CaseDetail is null)
-{
-    <p>Loading case details...</p>
-}
-else
-{
-    <button class="btn btn-secondary" @onclick="GoBack">Back to Cases</button>
-
-    <h4>Case Information</h4>
-    <table class="table">
-        <tbody>
-            <tr><th>Case ID</th><td>@CaseDetail.CaseId</td></tr>
-            <tr><th>Status</th><td>@CaseDetail.Status</td></tr>
-            <tr><th>Test Type</th><td>@CaseDetail.TestType</td></tr>
-            <tr><th>Created By</th><td>@CaseDetail.CreatedBy</td></tr>
-            <tr><th>Created At</th><td>@CaseDetail.CreatedAt.ToLocalTime().ToString("g")</td></tr>
-        </tbody>
-    </table>
-
-    <h4>Patient Information</h4>
-    @if (CaseDetail.Patient is null)
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
     {
-        <p>No patient information found.</p>
+        <div class="alert alert-error">@ErrorMessage</div>
+    }
+
+    @if (CaseDetail is null)
+    {
+        <section class="work-surface details-surface">
+            <div class="loading-row">Loading case details...</div>
+        </section>
     }
     else
     {
-        <table class="table">
-            <tbody>
-                <tr><th>First Name</th><td>@CaseDetail.Patient.FirstName</td></tr>
-                <tr><th>Last Name</th><td>@CaseDetail.Patient.LastName</td></tr>
-                <tr><th>DOB</th><td>@CaseDetail.Patient.DOB?.ToString("MM/dd/yyyy")</td></tr>
-                <tr><th>MRN</th><td>@CaseDetail.Patient.MRN</td></tr>
-            </tbody>
-        </table>
-    }
-
-    <h4>Kit Information</h4>
-    @if (CaseDetail.KitInfo is null)
-    {
-        <p>No kit information found.</p>
-    }
-    else
-    {
-        <table class="table">
-            <tbody>
-                <tr><th>Kit Box Code</th><td>@CaseDetail.KitInfo.KitBoxCode</td></tr>
-                <tr><th>Lot Code</th><td>@CaseDetail.KitInfo.LotCode</td></tr>
-                <tr><th>Operator Name</th><td>@CaseDetail.KitInfo.OperatorName</td></tr>
-                <tr><th>Received At</th><td>@CaseDetail.KitInfo.ReceivedAt.ToLocalTime().ToString("g")</td></tr>
-            </tbody>
-        </table>
-    }
-
-    <h4>Documents</h4>
-    @if (!CaseDetail.Documents.Any())
-    {
-        <p>No documents uploaded.</p>
-    }
-    else
-    {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Document ID</th>
-                    <th>File Name</th>
-                    <th>Content Type</th>
-                    <th>Uploaded At</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var document in CaseDetail.Documents)
-                {
-                    <tr>
-                        <td>@document.DocumentId</td>
-                        <td>@document.FileName</td>
-                        <td>@document.ContentType</td>
-                        <td>@document.UploadedAt.ToLocalTime().ToString("g")</td>
-                        <td>
-                           <a class="btn btn-sm btn-primary"
-                           href="@GetDocumentDownloadUrl(document.DocumentId)"
-                           target="_blank">
-                            View / Download
-                        </a>
-                    </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-
-    <h4>Tube Photos</h4>
-
-    @if (!TubePhotos.Any())
-    {
-        <p>No tube photos uploaded.</p>
-    }
-    else
-    {
-        <div style="display:flex; gap:15px; flex-wrap:wrap;">
-            @foreach (var photo in TubePhotos)
-            {
-                <div style="border:1px solid #ccc; padding:10px; width:220px;">
-                    <img src="@GetFullImageUrl(photo.ImageUrl)"
-                         style="width:200px; height:160px; object-fit:cover; cursor:pointer;"
-                         @onclick="() => OpenTubePhoto(photo.ImageUrl)" />
-
-                    <p>@photo.FileName</p>
-                    <small>@photo.CapturedAt.ToLocalTime().ToString("g")</small>
+        <div class="detail-layout">
+            <section class="work-surface details-surface">
+                <div class="record-header">
+                    <div>
+                        <h2>@DisplayValue(CaseDetail.TestType) Intake</h2>
+                        <p>Created by @DisplayValue(CaseDetail.CreatedBy) on @CaseDetail.CreatedAt.ToLocalTime().ToString("g")</p>
+                    </div>
+                    <span class="@GetStatusBadgeClass(CaseDetail.Status)">
+                        @GetStatusLabel(CaseDetail.Status)
+                    </span>
                 </div>
-            }
+
+                <div class="info-grid">
+                    <div class="info-panel">
+                        <h3>Case Information</h3>
+                        <dl class="data-list">
+                            <dt>Case ID</dt>
+                            <dd>CASE-@CaseDetail.CaseId.ToString("D5")</dd>
+                            <dt>Status</dt>
+                            <dd>@GetStatusLabel(CaseDetail.Status)</dd>
+                            <dt>Test Type</dt>
+                            <dd>@DisplayValue(CaseDetail.TestType)</dd>
+                            <dt>Created By</dt>
+                            <dd>@DisplayValue(CaseDetail.CreatedBy)</dd>
+                            <dt>Created At</dt>
+                            <dd>@CaseDetail.CreatedAt.ToLocalTime().ToString("g")</dd>
+                        </dl>
+                    </div>
+
+                    <div class="info-panel">
+                        <h3>Patient Information</h3>
+                        @if (CaseDetail.Patient is null)
+                        {
+                            <p class="selected-file">No patient information found.</p>
+                        }
+                        else
+                        {
+                            <dl class="data-list">
+                                <dt>First Name</dt>
+                                <dd>@DisplayValue(CaseDetail.Patient.FirstName)</dd>
+                                <dt>Last Name</dt>
+                                <dd>@DisplayValue(CaseDetail.Patient.LastName)</dd>
+                                <dt>DOB</dt>
+                                <dd>@(CaseDetail.Patient.DOB?.ToString("MM/dd/yyyy") ?? "-")</dd>
+                                <dt>MRN</dt>
+                                <dd>@DisplayValue(CaseDetail.Patient.MRN)</dd>
+                            </dl>
+                        }
+                    </div>
+
+                    <div class="info-panel">
+                        <h3>Kit Information</h3>
+                        @if (CaseDetail.KitInfo is null)
+                        {
+                            <p class="selected-file">No kit information found.</p>
+                        }
+                        else
+                        {
+                            <dl class="data-list">
+                                <dt>Kit Box Code</dt>
+                                <dd>@DisplayValue(CaseDetail.KitInfo.KitBoxCode)</dd>
+                                <dt>Lot Code</dt>
+                                <dd>@DisplayValue(CaseDetail.KitInfo.LotCode)</dd>
+                                <dt>Operator</dt>
+                                <dd>@DisplayValue(CaseDetail.KitInfo.OperatorName)</dd>
+                                <dt>Received At</dt>
+                                <dd>@CaseDetail.KitInfo.ReceivedAt.ToLocalTime().ToString("g")</dd>
+                            </dl>
+                        }
+                    </div>
+                </div>
+
+                <div class="asset-section">
+                    <h3>Documents</h3>
+                    @if (!CaseDetail.Documents.Any())
+                    {
+                        <div class="empty-state">
+                            <h2>No documents uploaded</h2>
+                            <p>This case does not have a requisition file attached yet.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Document</th>
+                                        <th>Content Type</th>
+                                        <th>Uploaded</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var document in CaseDetail.Documents)
+                                    {
+                                        <tr>
+                                            <td>@DisplayValue(document.FileName)</td>
+                                            <td>@DisplayValue(document.ContentType)</td>
+                                            <td>@document.UploadedAt.ToLocalTime().ToString("g")</td>
+                                            <td>
+                                                <a class="btn btn-secondary btn-sm"
+                                                   href="@GetDocumentDownloadUrl(document.DocumentId)"
+                                                   target="_blank">
+                                                    View / Download
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+
+                <div class="asset-section">
+                    <h3>Tube Photos</h3>
+
+                    @if (!TubePhotos.Any())
+                    {
+                        <div class="empty-state">
+                            <h2>No tube photos uploaded</h2>
+                            <p>Tube image evidence will appear here after intake capture.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="photo-grid">
+                            @foreach (var photo in TubePhotos)
+                            {
+                                <div class="case-photo">
+                                    <img src="@GetFullImageUrl(photo.ImageUrl)"
+                                         alt="@photo.FileName"
+                                         @onclick="() => OpenTubePhoto(photo.ImageUrl)" />
+
+                                    <p>@DisplayValue(photo.FileName)</p>
+                                    <small>@photo.CapturedAt.ToLocalTime().ToString("g")</small>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+
+            <aside class="detail-side">
+                <div class="timer-panel">
+                    <strong>@(CaseDetail.CreatedAt.ToLocalTime().ToString("HH:mm"))</strong>
+                    <span>Local accession time</span>
+                    <span>@GetStatusLabel(CaseDetail.Status)</span>
+                </div>
+
+                <div class="side-note">
+                    <h3>Review Checklist</h3>
+                    <p>Confirm two patient identifiers, requisition match, kit barcode, lot code, and tube-photo clarity.</p>
+                </div>
+
+                <div class="side-note">
+                    <h3>Portfolio Note</h3>
+                    <p>This screen demonstrates the full accessioning record flow with API-backed case data and uploaded assets.</p>
+                </div>
+            </aside>
         </div>
     }
+
     @if (ShowTubePhotoModal)
     {
-        <div style="
-                position:fixed;
-                top:0;
-                left:0;
-                width:100%;
-                height:100%;
-                background-color:rgba(0,0,0,0.7);
-                z-index:9999;
-                display:flex;
-                justify-content:center;
-                align-items:center;">
+        <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="tubePhotoTitle">
+            <div class="modal-panel">
+                <div class="modal-header">
+                    <h2 id="tubePhotoTitle">Tube Photo</h2>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="CloseTubePhotoModal">
+                        Close
+                    </button>
+                </div>
 
-            <div style="background:white; padding:20px; border-radius:8px;">
-                <button class="btn btn-danger" @onclick="CloseTubePhotoModal">
-                    Close
-                </button>
-
-                <div style="margin-top:10px;">
-                    <img src="@GetFullImageUrl(SelectedTubePhotoUrl!)"
-                         style="max-width:900px; max-height:80vh;" />
+                <div class="document-frame">
+                    <img class="photo-modal-image" src="@GetFullImageUrl(SelectedTubePhotoUrl!)" alt="Selected tube" />
                 </div>
             </div>
         </div>
     }
-}
+</div>
 
 @code {
     [Parameter]
@@ -162,6 +224,7 @@ else
     private List<TubePhotoModel> TubePhotos { get; set; } = new();
     private bool ShowTubePhotoModal;
     private string? SelectedTubePhotoUrl;
+    private string ApiBaseUrl { get; set; } = string.Empty;
 
     private void OpenTubePhoto(string imageUrl)
     {
@@ -176,14 +239,31 @@ else
     }
 
     private string GetDocumentDownloadUrl(int documentId)
-
     {
-        return $"https://localhost:7093/api/cases/documents/{documentId}/download";
+        return string.IsNullOrWhiteSpace(ApiBaseUrl)
+            ? "#"
+            : $"{ApiBaseUrl}/api/cases/documents/{documentId}/download";
     }
 
     private string GetFullImageUrl(string imageUrl)
     {
-        return $"https://localhost:7093{imageUrl}";
+        if (string.IsNullOrWhiteSpace(imageUrl))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(imageUrl, UriKind.Absolute, out _))
+        {
+            return imageUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(ApiBaseUrl))
+        {
+            return imageUrl;
+        }
+
+        var relativePath = imageUrl.StartsWith('/') ? imageUrl : $"/{imageUrl}";
+        return $"{ApiBaseUrl}{relativePath}";
     }
 
     protected override async Task OnInitializedAsync()
@@ -191,9 +271,10 @@ else
         try
         {
             var client = HttpClientFactory.CreateClient("ApiClient");
+            ApiBaseUrl = client.BaseAddress?.ToString().TrimEnd('/') ?? string.Empty;
             CaseDetail = await client.GetFromJsonAsync<CaseDetailsModel>($"api/cases/{CaseId}");
             TubePhotos = await client.GetFromJsonAsync<List<TubePhotoModel>>(
-    $"api/cases/{CaseId}/tube-photos") ?? new();
+                $"api/cases/{CaseId}/tube-photos") ?? new();
         }
         catch (Exception ex)
         {
@@ -204,5 +285,30 @@ else
     private void GoBack()
     {
         NavigationManager.NavigateTo("/cases");
+    }
+
+    private static string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private static string GetStatusLabel(string status)
+    {
+        return status switch
+        {
+            "ReadyForReview" => "Ready For Review",
+            "Draft" => "Draft",
+            _ => status
+        };
+    }
+
+    private static string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "ReadyForReview" => "status-pill status-ready",
+            "Draft" => "status-pill status-draft",
+            _ => "status-pill status-neutral"
+        };
     }
 }

@@ -1,28 +1,27 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">SmartAccessioningPortal.Web</a>
-    </div>
-</div>
-
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
+    <nav class="portal-nav" aria-label="Primary navigation">
+        <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                Home
             </NavLink>
         </div>
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="cases/new">
-                <span class="bi bi-plus-square-fill-nav-menu"></span> New Intake Case
+                Accessioning
             </NavLink>
         </div>
-        <div class="nav-item px-3">
+        <div class="nav-item">
             <NavLink class="nav-link" href="cases">
-                <span class="bi bi-list-nested-nav-menu"></span> New Intake Case
+                Case Queue
             </NavLink>
+        </div>
+        <div class="nav-item nav-item-muted">
+            <span class="nav-link">LIMS</span>
+        </div>
+        <div class="nav-item nav-item-muted">
+            <span class="nav-link">Orders</span>
         </div>
     </nav>
 </div>
-

@@ -1,7 +1,197 @@
-﻿@page "/"
+@page "/"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@using SmartAccessioningPortal.Web.Models
+@inject IHttpClientFactory HttpClientFactory
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Accessioning Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="portal-page">
+    <div class="page-heading">
+        <div>
+            <p class="eyebrow">Fusion lab portal</p>
+            <h1>Accessioning Dashboard</h1>
+            <p>Monitor intake work, open new kits, and keep review-ready cases moving through the lab workflow.</p>
+        </div>
+        <div class="heading-actions">
+            <a class="btn btn-primary" href="cases/new">Process New Kit</a>
+            <a class="btn btn-secondary" href="cases">Open Queue</a>
+        </div>
+    </div>
 
-Welcome to your new app.
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert alert-error">@ErrorMessage</div>
+    }
+
+    <div class="dashboard-grid">
+        <section class="work-surface dashboard-main">
+            <div class="section-heading">
+                <div>
+                    <h2>Today at San Carlos</h2>
+                    <p>Operational intake summary</p>
+                </div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <span>Total Cases</span>
+                    <strong>@TotalCountDisplay</strong>
+                    <small>Created in the portal</small>
+                </div>
+                <div class="metric-card">
+                    <span>Ready</span>
+                    <strong>@ReadyCountDisplay</strong>
+                    <small>Queued for review</small>
+                </div>
+                <div class="metric-card">
+                    <span>Draft</span>
+                    <strong>@DraftCountDisplay</strong>
+                    <small>Needs intake completion</small>
+                </div>
+            </div>
+
+            @if (CaseList is null)
+            {
+                <div class="loading-row">Loading recent work...</div>
+            }
+            else if (!RecentCases.Any())
+            {
+                <div class="empty-state">
+                    <h2>No intake cases yet</h2>
+                    <p>Create the first case to populate the operations queue.</p>
+                    <a class="btn btn-primary" href="cases/new">Process New Kit</a>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Case</th>
+                                <th>Status</th>
+                                <th>Test Type</th>
+                                <th>Patient</th>
+                                <th>Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in RecentCases)
+                            {
+                                <tr>
+                                    <td>
+                                        <a class="case-link" href="@($"/cases/{item.CaseId}")">
+                                            CASE-@item.CaseId.ToString("D5")
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="@GetStatusBadgeClass(item.Status)">
+                                            @GetStatusLabel(item.Status)
+                                        </span>
+                                    </td>
+                                    <td>@DisplayValue(item.TestType)</td>
+                                    <td>@GetPatientName(item)</td>
+                                    <td>@item.CreatedAt.ToLocalTime().ToString("g")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <aside class="dashboard-side work-surface">
+            <div class="section-heading">
+                <div>
+                    <h2>Operator Workbench</h2>
+                    <p>Quick actions</p>
+                </div>
+            </div>
+
+            <div class="action-row">
+                <a class="btn btn-primary" href="cases/new">New Kit</a>
+                <a class="btn btn-secondary" href="cases">Review Cases</a>
+            </div>
+
+            <div class="asset-section">
+                <h3>Active Rack Snapshot</h3>
+                <div class="rack-list">
+                    <div class="rack-card">
+                        <span>Panorama</span>
+                        <strong>P2769156-RACK</strong>
+                        <small>Ready to close</small>
+                    </div>
+                    <div class="rack-card warning">
+                        <span>Requisition</span>
+                        <strong>Needs Verification</strong>
+                        <small>Document preview required</small>
+                    </div>
+                    <div class="rack-card danger">
+                        <span>Archive</span>
+                        <strong>Hold Review</strong>
+                        <small>Pending operator note</small>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@code {
+    private List<CaseListItemModel>? CaseList;
+    private string? ErrorMessage;
+
+    private string TotalCountDisplay => CaseList is null ? "--" : CaseList.Count.ToString();
+    private string ReadyCountDisplay => CaseList is null ? "--" : CaseList.Count(x => x.Status == "ReadyForReview").ToString();
+    private string DraftCountDisplay => CaseList is null ? "--" : CaseList.Count(x => x.Status == "Draft").ToString();
+    private IEnumerable<CaseListItemModel> RecentCases =>
+        (CaseList ?? [])
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(6);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient("ApiClient");
+            CaseList = await client.GetFromJsonAsync<List<CaseListItemModel>>("api/cases");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Unable to load dashboard data: {ex.Message}";
+            CaseList = new List<CaseListItemModel>();
+        }
+    }
+
+    private static string DisplayValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "-" : value;
+    }
+
+    private static string GetPatientName(CaseListItemModel item)
+    {
+        var name = $"{item.PatientFirstName} {item.PatientLastName}".Trim();
+        return string.IsNullOrWhiteSpace(name) ? "-" : name;
+    }
+
+    private static string GetStatusLabel(string status)
+    {
+        return status switch
+        {
+            "ReadyForReview" => "Ready For Review",
+            "Draft" => "Draft",
+            _ => status
+        };
+    }
+
+    private static string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "ReadyForReview" => "status-pill status-ready",
+            "Draft" => "status-pill status-draft",
+            _ => "status-pill status-neutral"
+        };
+    }
+}
